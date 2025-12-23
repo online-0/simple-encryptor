@@ -7,6 +7,10 @@ HTML = """
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
 <title>Secure Encryptor</title>
 
 <style>
@@ -45,12 +49,22 @@ button {
 <body>
 <h2>🔐 Secure Encryptor</h2>
 
-<label>Message / Encrypted Text</label>
-<textarea id="text" rows="5"></textarea>
+<!-- NO FORM TAG = no save-password prompts -->
 
-<label>Password</label>
-<input type="password" id="password">
-<button onclick="togglePassword()">👁 Show / Hide Password</button>
+<label>Message / Encrypted Text</label>
+<textarea id="text" rows="5" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+
+<label>Secret Key</label>
+<input
+    type="password"
+    id="secret"
+    autocomplete="new-password"
+    autocorrect="off"
+    autocapitalize="off"
+    spellcheck="false"
+/>
+
+<button onclick="togglePassword()">👁 Show / Hide Key</button>
 
 <button onclick="encrypt()">Encrypt</button>
 <button onclick="decrypt()">Decrypt</button>
@@ -59,7 +73,7 @@ button {
 <textarea id="result" rows="5" readonly></textarea>
 <button onclick="copyResult()">📋 Copy to Clipboard</button>
 
-<p class="small">Encryption happens locally in your browser.</p>
+<p class="small">Encryption runs locally. No data is sent or stored.</p>
 
 <script>
 // ---------- CRYPTO (CLIENT SIDE) ----------
@@ -85,8 +99,8 @@ async function deriveKey(password, salt) {
 
 async function encrypt() {
     const text = document.getElementById("text").value;
-    const password = document.getElementById("password").value;
-    if (!text || !password) return alert("Missing text or password");
+    const password = document.getElementById("secret").value;
+    if (!text || !password) return alert("Missing text or key");
 
     const enc = new TextEncoder();
     const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -104,63 +118,4 @@ async function encrypt() {
     ]);
 
     document.getElementById("result").value =
-        btoa(String.fromCharCode(...combined));
-}
-
-async function decrypt() {
-    const data = document.getElementById("text").value;
-    const password = document.getElementById("password").value;
-    if (!data || !password) return alert("Missing text or password");
-
-    try {
-        const raw = Uint8Array.from(atob(data), c => c.charCodeAt(0));
-        const salt = raw.slice(0, 16);
-        const iv = raw.slice(16, 28);
-        const encrypted = raw.slice(28);
-
-        const key = await deriveKey(password, salt);
-        const decrypted = await crypto.subtle.decrypt(
-            { name: "AES-GCM", iv: iv },
-            key,
-            encrypted
-        );
-
-        document.getElementById("result").value =
-            new TextDecoder().decode(decrypted);
-    } catch {
-        alert("Wrong password or invalid data");
-    }
-}
-
-function copyResult() {
-    const r = document.getElementById("result");
-    r.select();
-    document.execCommand("copy");
-    alert("Copied!");
-}
-
-function togglePassword() {
-    const p = document.getElementById("password");
-    p.type = p.type === "password" ? "text" : "password";
-}
-
-// ---------- PWA ----------
-
-if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register(
-        URL.createObjectURL(new Blob([`
-            self.addEventListener("fetch", e => {});
-        `], { type: "text/javascript" }))
-    );
-}
-</script>
-</body>
-</html>
-"""
-
-@app.route("/")
-def index():
-    return render_template_string(HTML)
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+        btoa(String.fromChar
